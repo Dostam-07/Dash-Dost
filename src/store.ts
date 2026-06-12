@@ -149,12 +149,21 @@ export const useAppStore = create<AppState>((setState, getState) => ({
       // Update metadata list stored in localStorage
       const currentMetaList = [...getState().savedDashboards];
       const existingIdx = currentMetaList.findIndex(m => m.dashboardId === id);
+      
+      let finalPrompt = prompt;
+      if (existingIdx !== -1) {
+        const existingMeta = currentMetaList[existingIdx];
+        if (prompt === "Dashboard configuration adjustment" && existingMeta.prompt) {
+          finalPrompt = existingMeta.prompt;
+        }
+      }
+      
       const newMeta: SavedDashboardMeta = {
         dashboardId: id,
         title: payload.title,
         subtitle: payload.subtitle,
         savedAt: new Date().toISOString(),
-        prompt
+        prompt: finalPrompt
       };
       
       if (existingIdx !== -1) {
@@ -179,11 +188,16 @@ export const useAppStore = create<AppState>((setState, getState) => ({
       await idbDel(`history_past_${id}`);
       await idbDel(`history_future_${id}`);
       await idbDel(`chats_${id}`);
+      
+      // Cleanup persisted filters and active pointers
+      localStorage.removeItem(`luminate_filters_for_${id}`);
+      
       const updatedMeta = getState().savedDashboards.filter(m => m.dashboardId !== id);
       setState({ savedDashboards: updatedMeta });
       localStorage.setItem('luminate_saved_index', JSON.stringify(updatedMeta));
       
       if (getState().currentPayload?.dashboardId === id) {
+        localStorage.removeItem('luminate_active_dashboard_id');
         setState({ currentPayload: null, undoStack: [], redoStack: [], canUndo: false, canRedo: false });
       }
     } catch (e) {

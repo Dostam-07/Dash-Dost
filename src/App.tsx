@@ -178,6 +178,25 @@ function SortableTabItem({ id, activeTab, onClick, onDuplicate }: SortableTabIte
   );
 }
 
+const getColSpanClasses = (sm: number, md: number, lg: number) => {
+  const smMap: Record<number, string> = {
+    1: 'col-span-1', 2: 'col-span-2', 3: 'col-span-3', 4: 'col-span-4',
+    5: 'col-span-5', 6: 'col-span-6', 7: 'col-span-7', 8: 'col-span-8',
+    9: 'col-span-9', 10: 'col-span-10', 11: 'col-span-11', 12: 'col-span-12'
+  };
+  const mdMap: Record<number, string> = {
+    1: 'md:col-span-1', 2: 'md:col-span-2', 3: 'md:col-span-3', 4: 'md:col-span-4',
+    5: 'md:col-span-5', 6: 'md:col-span-6', 7: 'md:col-span-7', 8: 'md:col-span-8',
+    9: 'md:col-span-9', 10: 'md:col-span-10', 11: 'md:col-span-11', 12: 'md:col-span-12'
+  };
+  const lgMap: Record<number, string> = {
+    1: 'lg:col-span-1', 2: 'lg:col-span-2', 3: 'lg:col-span-3', 4: 'lg:col-span-4',
+    5: 'lg:col-span-5', 6: 'lg:col-span-6', 7: 'lg:col-span-7', 8: 'lg:col-span-8',
+    9: 'lg:col-span-9', 10: 'lg:col-span-10', 11: 'lg:col-span-11', 12: 'lg:col-span-12'
+  };
+  return `${smMap[sm] || 'col-span-12'} ${mdMap[md] || 'md:col-span-12'} ${lgMap[lg] || 'lg:col-span-6'}`;
+};
+
 export default function App() {
   const {
     theme,
@@ -209,6 +228,35 @@ export default function App() {
   const [filterState, setFilterState] = useState<ActiveFilterState>({
     selectedCategories: {}
   });
+
+  const lastLoadedDashId = useRef<string | null>(null);
+
+  // Load and save logic for filters
+  useEffect(() => {
+    if (!currentPayload?.dashboardId) {
+      if (Object.keys(filterState.selectedCategories).length > 0 || filterState.dateRange) {
+        setFilterState({ selectedCategories: {} });
+      }
+      return;
+    }
+
+    if (lastLoadedDashId.current !== currentPayload.dashboardId) {
+      try {
+        const stored = localStorage.getItem(`luminate_filters_for_${currentPayload.dashboardId}`);
+        if (stored) {
+          setFilterState(JSON.parse(stored));
+        } else {
+          setFilterState({ selectedCategories: {} });
+        }
+      } catch (e) {
+        console.warn("Failed retrieving persisted filters", e);
+        setFilterState({ selectedCategories: {} });
+      }
+      lastLoadedDashId.current = currentPayload.dashboardId;
+    } else {
+      localStorage.setItem(`luminate_filters_for_${currentPayload.dashboardId}`, JSON.stringify(filterState));
+    }
+  }, [filterState, currentPayload?.dashboardId]);
 
   // Slide-in premium inline notification
   const [notify, setNotify] = useState<{ message: string; type: 'success' | 'refuse' } | null>(null);
@@ -1246,6 +1294,13 @@ export default function App() {
         }
 
         const finalPayload = parsePartialPayload(streamedBuffer);
+        if (streamedBuffer.includes('[ERROR:')) {
+          const match = streamedBuffer.match(/\[ERROR:\s*(.*?)\]/);
+          if (match && match[1]) {
+            throw new Error(match[1]);
+          }
+        }
+        
         if (finalPayload) {
           // Final state is complete! Save to store and push state history
           await pushState(finalPayload);
@@ -1297,30 +1352,34 @@ export default function App() {
   }) || [];
 
   return (
-    <div className="min-h-screen bg-[#FAFAFA] text-slate-900 dark:bg-zinc-950 dark:text-zinc-50 transition-colors duration-300 flex flex-col antialiased">
+    <div className="h-screen overflow-hidden bg-[#F8F9FA] text-slate-1000 dark:bg-[#07080a] dark:text-zinc-50 transition-colors duration-300 flex flex-col antialiased">
       
       {/* PERSISTENT APP HEADER BAR */}
-      <header className="sticky top-0 z-30 w-full shrink-0 border-b border-slate-200 bg-white dark:border-zinc-900/60 dark:bg-zinc-950/80 shadow-sm">
+      <header className="sticky top-0 z-30 w-full shrink-0 border-b border-slate-205 bg-white dark:border-zinc-900/90 dark:bg-[#09090b] shadow-xs backdrop-blur-md">
         <div className="flex h-16 items-center justify-between px-6 sm:px-8">
           <div className="flex items-center gap-4">
-            <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-indigo-600 dark:bg-indigo-500 shadow-sm animate-pulse">
-              <div className="w-4 h-4 border-2 border-white rounded-full"></div>
+            {/* Mockup concentric circle nested logo */}
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-600 dark:bg-violet-600 shadow-md transform hover:rotate-12 transition-transform duration-300 cursor-pointer">
+              <div className="relative flex items-center justify-center h-5 w-5 rounded-full border-2 border-white/90">
+                <div className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
+              </div>
             </div>
+            
             <div className="flex items-center">
-              <span className="font-bold text-xl tracking-tight text-slate-900 dark:text-white">
+              <span className="font-extrabold text-lg sm:text-xl tracking-tight text-slate-900 dark:text-white font-sans">
                 Dash-Dost
               </span>
-              <div className="h-4 w-px bg-slate-200 dark:bg-zinc-800 mx-3.5"></div>
-              <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-zinc-500 font-mono">
+              <div className="h-4 w-px bg-slate-200 dark:bg-zinc-850 mx-3.5"></div>
+              <span className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-[#64748b] dark:text-[#475569] font-mono">
                 Builder Studio
               </span>
             </div>
           </div>
 
           {/* GLOBAL DASHBOARD SEARCH */}
-          <div className="hidden md:flex flex-1 max-w-md mx-6 relative">
+          <div className="hidden md:flex flex-1 max-w-lg mx-8 relative">
             <div className="relative w-full">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 dark:text-zinc-500 pointer-events-none" />
+              <Search className="absolute left-4.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 dark:text-zinc-500 pointer-events-none" />
               <input
                 type="text"
                 placeholder="Search dashboards by title or Prompt keywords..."
@@ -1328,7 +1387,7 @@ export default function App() {
                 onChange={(e) => setSearchTerm(e.target.value)}
                 onFocus={() => setIsSearchFocused(true)}
                 onBlur={() => setTimeout(() => setIsSearchFocused(false), 255)}
-                className="w-full pl-9 pr-4 py-1.5 text-xs bg-slate-50 border border-slate-200 hover:bg-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 dark:bg-zinc-900/60 dark:border-zinc-800 dark:text-zinc-100 dark:hover:bg-zinc-900 transition-all font-sans"
+                className="w-full pl-11 pr-5 py-2 text-xs bg-slate-50 border border-slate-200 hover:bg-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-550/30 dark:bg-zinc-900/50 dark:border-zinc-800 dark:text-zinc-100 dark:hover:bg-zinc-900/80 transition-all font-sans placeholder-slate-400 dark:placeholder-zinc-650"
               />
               {/* Dropdown Results Box */}
               {isSearchFocused && searchTerm.trim() && (
@@ -1415,11 +1474,11 @@ export default function App() {
       <div className="flex-1 w-full grid grid-cols-1 lg:grid-cols-12 min-h-0 relative">
         
         {/* PANEL A: LEFT SIDEBAR - HISTORY & NEW DASHBOARD */}
-        <div className={`col-span-12 lg:col-span-3 lg:border-r border-slate-200 dark:border-zinc-800 bg-[#FCFDFE] dark:bg-zinc-950 p-4 lg:p-5 overflow-y-auto max-h-[calc(100vh-4rem)] flex flex-col justify-start custom-scrollbar shrink-0 ${mobileTab === 'history' ? 'block' : 'hidden lg:block'}`}>
+        <div className={`col-span-12 lg:col-span-3 lg:border-r border-slate-200 dark:border-zinc-900 bg-[#FCFDFE] dark:bg-[#07080a] p-4 lg:p-5 overflow-y-auto h-full flex flex-col justify-start custom-scrollbar shrink-0 ${mobileTab === 'history' ? 'block' : 'hidden lg:block'}`}>
           <div className="mb-4 space-y-3">
             <button
               onClick={handleNewDashboard}
-              className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-550 dark:hover:bg-indigo-600 transition-all font-sans cursor-pointer shadow-md inline-flex items-center justify-center group"
+              className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs font-black uppercase tracking-wider text-white bg-violet-600 hover:bg-violet-700 dark:bg-violet-600 dark:hover:bg-violet-700 transition-all font-sans cursor-pointer shadow-md inline-flex items-center justify-center group"
               title="Start a fresh blank dashboard session"
             >
               <Plus className="h-4 w-4 transition-transform group-hover:rotate-90" />
@@ -1433,19 +1492,20 @@ export default function App() {
         </div>
 
         {/* PANEL B: MIDDLE DISPLAY CANVAS - CORE DASHBOARD VIEWPORT */}
-        <main className={`col-span-12 lg:col-span-6 p-4 sm:p-5 md:p-6 flex flex-col justify-start overflow-y-auto max-h-[calc(100vh-4rem)] custom-scrollbar ${mobileTab === 'dashboard' ? 'block' : 'hidden lg:block'}`}>
+        <main className={`col-span-12 lg:col-span-9 p-4 sm:p-5 md:p-6 flex flex-col justify-start overflow-y-auto h-full custom-scrollbar ${mobileTab === 'dashboard' ? 'block' : 'hidden lg:block'}`}>
           
           {!currentPayload ? (
             
             /* INTRO EXPERIENCE */
             <div className="max-w-2xl mx-auto w-full my-auto py-12 sm:py-20 flex flex-col items-center">
-              <div className="text-center space-y-3.5 mb-10">
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold text-indigo-700 bg-indigo-50 border border-indigo-100 dark:bg-indigo-950/20 dark:text-indigo-400 dark:border-indigo-900/40 font-mono">
-                  <Activity className="h-3 w-3" />
+              <div className="text-center space-y-5 mb-10">
+                {/* Mockup styled capsule badge */}
+                <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold text-violet-600 bg-violet-50/70 border border-violet-100/90 dark:bg-violet-950/20 dark:text-violet-400 dark:border-violet-900/40 font-mono tracking-wide shadow-sm">
+                  <Activity className="h-3 w-3 text-violet-500 animate-pulse" />
                   <span>Interactive Dashboard Generator</span>
                 </div>
                 
-                <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-neutral-900 dark:text-zinc-50 font-sans">
+                <h2 className="text-3xl sm:text-5xl font-black tracking-tight text-slate-900 dark:text-white font-sans leading-tight">
                   Turn plain English into high-performance analytical dashboards
                 </h2>
                 
@@ -1457,7 +1517,7 @@ export default function App() {
               {/* Central landing prompt input */}
               <form onSubmit={handleLandingSubmit} className="w-full relative mb-12">
                 {useAppStore.getState().attachedData && (
-                  <div className="flex items-center gap-2 mb-2 px-3 py-1.5 bg-indigo-50 dark:bg-indigo-950/30 rounded-lg w-max border border-indigo-100 dark:border-indigo-900/40 animate-fade-in">
+                  <div className="flex items-center gap-2 mb-2.5 px-3 py-1.5 bg-indigo-50 dark:bg-indigo-950/30 rounded-lg w-max border border-indigo-100 dark:border-indigo-900/40 animate-fade-in">
                     <Database className="h-3 w-3 text-indigo-500" />
                     <span className="text-xs text-indigo-700 dark:text-indigo-400 font-mono">
                       Data Attached: {useAppStore.getState().attachedData?.fileName}
@@ -1471,31 +1531,31 @@ export default function App() {
                     </button>
                   </div>
                 )}
-                <div className="flex flex-col sm:flex-row gap-2.5 p-1.5 rounded-2xl bg-white border border-slate-200 shadow-sm dark:bg-zinc-950 dark:border-zinc-800">
+                <div className="flex flex-col sm:flex-row gap-2 p-2 rounded-2xl bg-white border border-slate-200/90 shadow-sm dark:bg-[#09090b] dark:border-zinc-800 focus-within:ring-2 focus-within:ring-violet-500/20 focus-within:border-violet-500/50 transition-all duration-300">
                   <input
                     type="text"
                     value={promptInput}
                     onChange={(e) => setPromptInput(e.target.value)}
                     disabled={isStreaming}
-                    placeholder="E.g., Global logistics cargo shipping tracker showing delay volumes..."
-                    className="flex-1 px-4 py-3 text-sm text-slate-800 dark:text-zinc-100 placeholder-teal-600/30 bg-transparent outline-none border-none focus:ring-0"
+                    placeholder="E.g., Global logistics cargo shipping tracker"
+                    className="flex-1 px-4 py-3.5 text-sm text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-650 bg-transparent outline-none border-none focus:ring-0 min-w-0"
                   />
-                  <div className="flex items-center gap-2 px-1">
+                  <div className="flex items-center gap-2 px-1 shrink-0">
                     {/* Inline Import on landing */}
                     <button
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
-                      className="p-2 bg-slate-50 hover:bg-slate-100 dark:bg-zinc-900 dark:hover:bg-zinc-800 rounded-xl text-slate-400 hover:text-slate-700 transition-all font-mono text-xs inline-flex items-center gap-1.5 border border-slate-200 dark:border-zinc-800 h-10 px-3 shrink-0"
+                      className="p-2.5 bg-slate-50 hover:bg-slate-100 dark:bg-zinc-900/80 dark:hover:bg-zinc-805 rounded-xl text-slate-500 hover:text-slate-800 dark:text-zinc-400 dark:hover:text-zinc-200 transition-all font-mono text-xs inline-flex items-center gap-1.5 border border-slate-200 dark:border-zinc-800/80 h-11 px-4 shrink-0 transition-all duration-200"
                       title="Upload config or datasets (CSV/Excel/PDF)"
                     >
                       <Upload className="h-4 w-4" />
-                      <span className="hidden sm:inline">Attach File</span>
+                      <span className="hidden sm:inline font-bold">Attach File</span>
                     </button>
                     
                     <button
                       type="submit"
                       disabled={!promptInput.trim() || isStreaming}
-                      className="px-5 py-2.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-100 disabled:text-slate-400 rounded-xl shadow-md cursor-pointer transition-all font-sans h-10 shrink-0"
+                      className="px-6 py-2.5 text-xs font-black text-white bg-violet-605 bg-gradient-to-r from-violet-600 to-indigo-650 hover:from-violet-700 hover:to-indigo-700 disabled:opacity-40 disabled:pointer-events-none rounded-xl shadow-md hover:shadow-lg transition-all font-sans h-11 shrink-0 inline-flex items-center justify-center cursor-pointer min-w-[100px]"
                     >
                       Generate
                     </button>
@@ -1827,11 +1887,11 @@ export default function App() {
 
                           <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-stretch relative">
                             {secComps.map((component) => {
-                              const smCol = component.layout?.sm || 12;
-                              const mdCol = component.layout?.md || 12;
-                              const lgCol = component.layout?.lg || 6;
-                              const colSpanClass = `col-span-${smCol} md:col-span-${mdCol} lg:col-span-${lgCol}`;
-                              const filteredRows = filterComponentData(component, currentPayload.filters || [], filterState);
+                               const smCol = component.layout?.sm || 12;
+                               const mdCol = component.layout?.md || 12;
+                               const lgCol = component.layout?.lg || 6;
+                               const colSpanClass = getColSpanClasses(smCol, mdCol, lgCol);
+                               const filteredRows = filterComponentData(component, currentPayload.filters || [], filterState);
 
                               return (
                                 <div key={component.id} className={colSpanClass}>
@@ -1879,7 +1939,7 @@ export default function App() {
                       const mdCol = component.layout?.md || 12;
                       const lgCol = component.layout?.lg || 6;
                       
-                      const colSpanClass = `col-span-${smCol} md:col-span-${mdCol} lg:col-span-${lgCol}`;
+                      const colSpanClass = getColSpanClasses(smCol, mdCol, lgCol);
 
                       // Slice dataset rows by dynamic configuration limit parameters
                       const filteredRows = filterComponentData(component, currentPayload.filters || [], filterState);
@@ -1954,16 +2014,11 @@ export default function App() {
 
             </div>
           )}
-        </main>
-
-        {/* PANEL C: RIGHT SIDEBAR - SUGGESTIONS, REMOVABLE PINS & CHATBOT INPUT */}
-        <div className={`col-span-12 lg:col-span-3 lg:border-l border-slate-200 dark:border-zinc-800 bg-[#FCFDFE] dark:bg-zinc-950 p-4 lg:p-5 overflow-y-auto max-h-[calc(100vh-4rem)] flex flex-col justify-start custom-scrollbar shrink-0 ${mobileTab === 'chat' ? 'block' : 'hidden lg:block'}`}>
-          
-          {/* Active removable tag chips */}
+          {/* Active removable tag chips in Panel B */}
           {Object.keys(filterState.selectedCategories).length > 0 && (
-            <div className="mb-4 p-3 bg-white dark:bg-zinc-900 border border-slate-250 dark:border-zinc-900 rounded-2xl space-y-2">
+            <div className="mt-6 p-3 bg-white dark:bg-zinc-900 border border-slate-250 dark:border-zinc-900 rounded-2xl space-y-2 shrink-0 max-w-xl">
               <div className="flex items-center justify-between">
-                <span className="text-[9px] font-mono font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-widest">Active Filters</span>
+                <span className="text-[9px] font-mono font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-widest font-mono">Active Filters</span>
                 <button 
                   onClick={handleResetFilters}
                   className="text-[9px] font-semibold text-indigo-600 hover:text-indigo-805 dark:text-indigo-400 font-mono transition-all cursor-pointer"
@@ -2002,22 +2057,14 @@ export default function App() {
             </div>
           )}
 
-          {/* Quick suggestions dataset starter list */}
-          <div className="mb-5">
-            <span className="text-[10px] font-mono font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-widest block mb-1.5">Prompt Starters</span>
-            <SuggestionChips onSelected={(p) => executeGeneration(p, false)} />
-          </div>
-
-          {/* Dynamic conversational AI Chatbot Panel */}
-          <div className="flex-1 bg-white dark:bg-zinc-950 rounded-2xl border border-slate-205 dark:border-zinc-850 overflow-hidden relative min-h-[300px]">
-            <ConversationalPanel
-              onRefine={(promptText, mode) => executeGeneration(promptText, true, mode === 'edit')}
-              onClearWorkspace={handleClearWorkspace}
-            />
-          </div>
-        </div>
+        </main>
 
       </div>
+
+      <ConversationalPanel
+        onRefine={(promptText, mode) => executeGeneration(promptText, true, mode === 'edit')}
+        onClearWorkspace={handleClearWorkspace}
+      />
 
       {/* MOBILE RESPONSIVE BOTTOM TAB SELECTOR BAR */}
       <div className="lg:hidden shrink-0 h-16 border-t border-slate-200 bg-white/90 dark:border-zinc-900 dark:bg-zinc-950/90 backdrop-blur-md flex items-center justify-around px-2 sticky bottom-0 z-30 shadow-[0_-2px_10px_rgba(0,0,0,0.03)] pb-safe-bottom">

@@ -35,6 +35,7 @@ import {
   AlertTriangle,
   Globe,
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import Papa from 'papaparse';
 import { useAppStore } from '../store';
 import { DashboardComponent } from '../types';
@@ -118,6 +119,119 @@ const CustomTooltip = ({ active, payload, label, format = 'formatted' }: any) =>
   return null;
 };
 
+interface SkeletonProps {
+  type: string;
+  showGeographicMap?: boolean;
+}
+
+export const Skeleton: React.FC<SkeletonProps> = ({ type, showGeographicMap = false }) => {
+  const basePulse = "animate-pulse bg-slate-205 dark:bg-zinc-805 rounded-xl";
+  
+  if (type === 'kpi_card') {
+    return (
+      <div className="flex flex-col h-full justify-between py-1.5 min-h-[140px] w-full">
+        <div className="space-y-3">
+          {/* KPI Title Placeholder */}
+          <div className={`h-3.5 w-1/3 ${basePulse}`} />
+          {/* Huge KPI Value Placeholder */}
+          <div className={`h-11 w-1/2 ${basePulse}`} />
+        </div>
+        <div className="flex items-center gap-2 mt-4">
+          {/* Trend Indicator Placeholder */}
+          <div className={`h-6 w-24 ${basePulse}`} />
+          <div className={`h-3 w-1/4 ${basePulse}`} />
+        </div>
+      </div>
+    );
+  }
+
+  if (type === 'pie_chart') {
+    return (
+      <div className="h-64 sm:h-72 w-full mt-4 flex flex-col items-center justify-center min-h-[256px]">
+        <div className="relative h-44 w-44 rounded-full border-12 border-slate-105 dark:border-zinc-900 flex items-center justify-center animate-pulse">
+          <div className="absolute inset-2 rounded-full border-12 border-slate-200/50 dark:border-zinc-800/50 transform rotate-45 animate-pulse" />
+          <div className="absolute inset-5 rounded-full bg-white dark:bg-zinc-950 flex flex-col items-center justify-center">
+            <div className="h-2 w-12 bg-slate-200 dark:bg-zinc-850 rounded-md mb-2" />
+            <div className="h-4.5 w-16 bg-slate-300 dark:bg-zinc-700 rounded-md" />
+          </div>
+        </div>
+        <div className="flex gap-3 mt-6 justify-center w-full">
+          <div className="h-2.5 w-16 bg-slate-200 dark:bg-zinc-800 rounded-md animate-pulse" />
+          <div className="h-2.5 w-16 bg-slate-150 dark:bg-zinc-855 rounded-md animate-pulse" />
+          <div className="h-2.5 w-12 bg-slate-100 dark:bg-zinc-900 rounded-md animate-pulse" />
+        </div>
+      </div>
+    );
+  }
+
+  if (type === 'map_chart' || type === 'geo_map' || showGeographicMap) {
+    return (
+      <div className="h-64 sm:h-72 w-full mt-4 flex flex-col items-center justify-center relative overflow-hidden bg-slate-50/40 dark:bg-zinc-900/10 rounded-2xl border border-dashed border-slate-200 dark:border-zinc-800/80 animate-pulse min-h-[256px]">
+        <Globe className="h-12 w-12 text-slate-300 dark:text-zinc-750 animate-spin" style={{ animationDuration: '6s' }} />
+        <div className="mt-4 text-center space-y-2">
+          <div className="h-4 w-44 bg-slate-200 dark:bg-zinc-800 rounded-md mx-auto" />
+          <div className="h-2 w-28 bg-slate-150 dark:bg-zinc-850 rounded-md mx-auto" />
+        </div>
+      </div>
+    );
+  }
+
+  // Default chart grid layout (bar/line/area/scatter)
+  return (
+    <div className="h-64 sm:h-72 w-full mt-4 flex flex-col justify-end min-h-[256px]">
+      {/* Simple chart lines/bars background */}
+      <div className="flex-1 w-full grid grid-cols-6 gap-4 items-end px-3 pb-4">
+        {[1, 2, 3, 4, 5, 6].map((num) => {
+          const hPercent = [35, 75, 45, 90, 60, 80][num - 1];
+          return (
+            <div key={num} className="flex flex-col items-center justify-end h-full w-full gap-2.5 relative">
+              {type === 'bar_chart' ? (
+                <div 
+                  className={`w-full rounded-t-lg bg-gradient-to-t from-slate-100 to-indigo-100/50 dark:from-zinc-900 dark:to-indigo-950/20 animate-pulse`} 
+                  style={{ height: `${hPercent}%` }} 
+                />
+              ) : type === 'scatter_chart' ? (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div 
+                    className="absolute flex items-center justify-center"
+                    style={{ bottom: `${hPercent}%` }}
+                  >
+                    <span className="h-3.5 w-3.5 rounded-full bg-indigo-400 dark:bg-indigo-600 animate-ping absolute" />
+                    <span className="h-2.5 w-2.5 rounded-full bg-indigo-500 dark:bg-indigo-500 relative" />
+                  </div>
+                </div>
+              ) : (
+                // Line or Area - simulate waveform path
+                <div className="absolute inset-0 flex items-end">
+                  <svg className="w-full h-full text-indigo-150/15 dark:text-indigo-950/25" viewBox="0 0 100 100" preserveAspectRatio="none">
+                    <path 
+                      d={type === 'area_chart' 
+                        ? "M0,100 C20,40 40,80 60,30 80,60 100,20 L100,100 Z" 
+                        : "M0,60 C20,45 40,75 60,30 80,55 100,20"
+                      } 
+                      fill={type === 'area_chart' ? "currentColor" : "none"} 
+                      stroke="rgba(124, 58, 237, 0.35)" 
+                      strokeWidth="2.5" 
+                      className="animate-pulse"
+                    />
+                  </svg>
+                </div>
+              )}
+              {/* Simulated x axis values */}
+              <div className="h-2 w-10/12 bg-slate-205 dark:bg-zinc-800 rounded-sm animate-pulse shrink-0" />
+            </div>
+          );
+        })}
+      </div>
+      {/* Legend Placeholder */}
+      <div className="flex gap-3 justify-center py-2 shrink-0">
+        <div className="h-2 w-16 bg-slate-200 dark:bg-zinc-800 rounded-sm animate-pulse" />
+        <div className="h-2 w-16 bg-slate-200 dark:bg-zinc-800 rounded-sm animate-pulse" />
+      </div>
+    </div>
+  );
+};
+
 export const ChartWrapper: React.FC<ChartWrapperProps> = ({
   component,
   filteredData,
@@ -133,6 +247,25 @@ export const ChartWrapper: React.FC<ChartWrapperProps> = ({
   
   const componentSettings = useAppStore((state) => state.componentSettings);
   const updateComponentSettings = useAppStore((state) => state.updateComponentSettings);
+  const isStreaming = useAppStore((state) => state.isStreaming);
+
+  const [isInitializing, setIsInitializing] = React.useState(true);
+  const [isFetching, setIsFetching] = React.useState(true);
+  
+  React.useEffect(() => {
+    const hasData = component.seriesData && component.seriesData.length > 0;
+    
+    if (isStreaming && !hasData) {
+      setIsInitializing(true);
+      setIsFetching(true);
+    } else {
+      const timer = setTimeout(() => {
+        setIsFetching(false);
+        setIsInitializing(false);
+      }, 850);
+      return () => clearTimeout(timer);
+    }
+  }, [component.id, filteredData.length, isStreaming, component.seriesData?.length]);
 
   const settings = componentSettings[component.id] || { 
     legendVisible: true, 
@@ -295,73 +428,7 @@ export const ChartWrapper: React.FC<ChartWrapperProps> = ({
     return colors[index % colors.length];
   };
 
-  const renderKPI = () => {
-    const trend = config.kpiTrend;
-    const value = config.kpiValue || (data.length > 0 && typeof data[data.length - 1][yAxisKeys[0]] !== 'undefined' 
-      ? data[data.length - 1][yAxisKeys[0]].toLocaleString()
-      : '0');
-
-    return (
-      <div className="flex flex-col h-full justify-between">
-        <div className="space-y-1">
-          <span className="text-xs font-semibold tracking-wider uppercase text-slate-400 dark:text-zinc-500 font-mono">
-            Key Metric
-          </span>
-          <h3 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-zinc-50 font-sans mt-0.5">
-            {value}
-          </h3>
-        </div>
-        
-        {trend && (
-          <div className="flex items-center gap-1.5 mt-2.5">
-            <span className={`inline-flex items-center gap-0.5 rounded px-2 py-0.5 text-[10px] font-bold border ${
-              trend.direction === 'up' 
-                ? 'bg-green-50 text-green-600 border-green-100 dark:bg-zinc-900 dark:text-green-400 dark:border-zinc-800'
-                : trend.direction === 'down'
-                ? 'bg-rose-50 text-rose-600 border-rose-105 dark:bg-zinc-900 dark:text-rose-450 dark:border-zinc-800'
-                : 'bg-slate-50 text-slate-600 border-slate-100 dark:bg-zinc-900/40 dark:text-zinc-400 dark:border-zinc-800'
-            }`}>
-              {trend.direction === 'up' && <ArrowUpRight className="h-3 w-3 mr-0.5 shrink-0" />}
-              {trend.direction === 'down' && <ArrowDownRight className="h-3 w-3 mr-0.5 shrink-0" />}
-              {trend.direction === 'neutral' && <Activity className="h-3 w-3 mr-0.5 shrink-0" />}
-              {trend.label}
-            </span>
-            <span className="text-xs text-slate-400 dark:text-zinc-500">since last period</span>
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  const renderContent = () => {
-    if (type === 'kpi_card') {
-      return renderKPI();
-    }
-
-    if (data.length === 0) {
-      return (
-        <div className="flex h-48 flex-col items-center justify-center rounded-xl bg-zinc-50/50 dark:bg-zinc-900/10 border border-dashed border-zinc-200 dark:border-zinc-800">
-          <p className="text-xs font-mono text-zinc-400 dark:text-zinc-500">No matching filtered data to plot</p>
-        </div>
-      );
-    }
-
-    if (type === 'map_chart' || type === 'geo_map' || showGeographicMap) {
-      return (
-        <div className="w-full mt-2 flex-1">
-          <GeographyMap 
-            data={component.seriesData || []}
-            filteredData={data}
-            selectedCategories={Object.values(filterState?.selectedCategories || {}).flat()}
-            xAxisKey={xAxisKey}
-            valueKey={yAxisKeys[0]}
-            title={title}
-            onDrillDown={onDrillDown}
-          />
-        </div>
-      );
-    }
-
+  const renderChartContent = () => {
     switch (type) {
       case 'bar_chart':
         return (
@@ -534,7 +601,6 @@ export const ChartWrapper: React.FC<ChartWrapperProps> = ({
         );
 
       case 'pie_chart':
-        // Pie usually matches labels x-axis (categories) and values (first element of yAxisKeys)
         const pieValueKey = yAxisKeys[0] || 'value';
         return (
           <div className={`${isFullscreen ? 'flex-1 h-[65vh] sm:h-[75vh]' : 'h-64 sm:h-72'} w-full mt-4 flex items-center justify-center`}>
@@ -599,6 +665,95 @@ export const ChartWrapper: React.FC<ChartWrapperProps> = ({
       default:
         return null;
     }
+  };
+
+  const renderKPI = () => {
+    const trend = config.kpiTrend;
+    const value = config.kpiValue || (data.length > 0 && typeof data[data.length - 1][yAxisKeys[0]] !== 'undefined' 
+      ? data[data.length - 1][yAxisKeys[0]].toLocaleString()
+      : '0');
+
+    return (
+      <div className="flex flex-col h-full justify-between">
+        <div className="space-y-1">
+          <span className="text-xs font-semibold tracking-wider uppercase text-slate-400 dark:text-zinc-500 font-mono">
+            Key Metric
+          </span>
+          <h3 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-zinc-50 font-sans mt-0.5">
+            {value}
+          </h3>
+        </div>
+        
+        {trend && (
+          <div className="flex items-center gap-1.5 mt-2.5">
+            <span className={`inline-flex items-center gap-0.5 rounded px-2 py-0.5 text-[10px] font-bold border ${
+              trend.direction === 'up' 
+                ? 'bg-green-50 text-green-600 border-green-100 dark:bg-zinc-900 dark:text-green-400 dark:border-zinc-800'
+                : trend.direction === 'down'
+                ? 'bg-rose-50 text-rose-600 border-rose-105 dark:bg-zinc-900 dark:text-rose-450 dark:border-zinc-800'
+                : 'bg-slate-50 text-slate-600 border-slate-100 dark:bg-zinc-900/40 dark:text-zinc-400 dark:border-zinc-800'
+            }`}>
+              {trend.direction === 'up' && <ArrowUpRight className="h-3 w-3 mr-0.5 shrink-0" />}
+              {trend.direction === 'down' && <ArrowDownRight className="h-3 w-3 mr-0.5 shrink-0" />}
+              {trend.direction === 'neutral' && <Activity className="h-3 w-3 mr-0.5 shrink-0" />}
+              {trend.label}
+            </span>
+            <span className="text-xs text-slate-400 dark:text-zinc-500">since last period</span>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderContent = () => {
+    const isLoading = isInitializing || isFetching || (isStreaming && (!component.seriesData || component.seriesData.length === 0));
+    
+    return (
+      <AnimatePresence mode="wait">
+        {isLoading ? (
+          <motion.div
+            key="skeleton"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            className="w-full flex-1 flex flex-col justify-end min-h-[inherit]"
+          >
+            <Skeleton type={type} showGeographicMap={showGeographicMap} />
+          </motion.div>
+        ) : (
+          <motion.div
+            key="content"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.3, ease: "easeOut" }}
+            className="w-full flex-1 flex flex-col justify-end min-h-[inherit]"
+          >
+            {type === 'kpi_card' ? (
+              renderKPI()
+            ) : data.length === 0 ? (
+              <div className="flex h-48 flex-col items-center justify-center rounded-xl bg-zinc-50/50 dark:bg-zinc-900/10 border border-dashed border-zinc-200 dark:border-zinc-800">
+                <p className="text-xs font-mono text-zinc-400 dark:text-zinc-500">No matching filtered data to plot</p>
+              </div>
+            ) : type === 'map_chart' || type === 'geo_map' || showGeographicMap ? (
+              <div className="w-full mt-2 flex-1">
+                <GeographyMap 
+                  data={component.seriesData || []}
+                  filteredData={data}
+                  selectedCategories={Object.values(filterState?.selectedCategories || {}).flat()}
+                  xAxisKey={xAxisKey}
+                  valueKey={yAxisKeys[0]}
+                  title={title}
+                  onDrillDown={onDrillDown}
+                />
+              </div>
+            ) : (
+              renderChartContent()
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    );
   };
 
   return (

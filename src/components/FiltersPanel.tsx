@@ -128,13 +128,13 @@ export const FiltersPanel: React.FC<FiltersPanelProps> = ({
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {filters.map((filter) => {
+          {filters.map((filter, index) => {
             if (filter.type === 'date_range') {
               const limits = getDashboardDateRangeLimits(payload, filter);
               const activeRange = filterState.dateRange || { start: limits?.min || '', end: limits?.max || '' };
 
               return (
-                <div key={filter.id} className="space-y-2 group relative p-1 rounded-xl hover:bg-slate-50/40 dark:hover:bg-zinc-900/10 transition-all">
+                <div key={`${filter.id}-${index}`} className="space-y-2 group relative p-1 rounded-xl hover:bg-slate-50/40 dark:hover:bg-zinc-900/10 transition-all">
                   
                   {/* Label & Actions wrapper */}
                   <div className="flex items-center justify-between">
@@ -205,7 +205,7 @@ export const FiltersPanel: React.FC<FiltersPanelProps> = ({
               const selectedOpts = filterState.selectedCategories[filter.id] || [];
 
               return (
-                <div key={filter.id} className="space-y-2 group relative p-1 rounded-xl hover:bg-slate-50/40 dark:hover:bg-zinc-900/10 transition-all">
+                <div key={`${filter.id}-${index}`} className="space-y-2 group relative p-1 rounded-xl hover:bg-slate-50/40 dark:hover:bg-zinc-900/10 transition-all">
                   
                   {/* Label & Actions wrapper */}
                   <div className="flex items-center justify-between">
@@ -238,11 +238,11 @@ export const FiltersPanel: React.FC<FiltersPanelProps> = ({
                   </div>
                   
                   <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto p-1.5 rounded-xl bg-slate-50/30 border border-slate-100 dark:bg-zinc-900/20 dark:border-zinc-900 custom-scrollbar">
-                    {options.map((opt) => {
+                    {options.map((opt, optIndex) => {
                       const isSelected = selectedOpts.includes(opt);
                       return (
                         <button
-                          key={opt}
+                          key={`${opt}-${optIndex}`}
                           onClick={() => handleToggleCategory(filter.id, opt)}
                           className={`px-3 py-1.5 text-[11px] font-semibold rounded-lg border transition-all duration-200 shadow-sm cursor-pointer ${
                             isSelected

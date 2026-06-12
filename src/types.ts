@@ -31,7 +31,7 @@ export interface ComponentConfig {
   kpiTrend?: KPITrend;
   showAnomalies?: boolean;
   showTrendline?: boolean;
-  mapType?: 'world' | 'us';
+  mapType?: 'world' | 'india';
 }
 
 export interface DashboardComponent {

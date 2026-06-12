@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import {
   Sparkles,
   RotateCcw,
@@ -13,10 +13,15 @@ import {
   History,
   Database,
   X,
+  Layers,
+  Minimize2,
+  Maximize2,
 } from 'lucide-react';
-import { useAppStore } from '../store';
+import { motion, AnimatePresence } from 'motion/react';
+import { useAppStore, loadDashboardFromIDB } from '../store';
 import { ChatMessage, MasterDashboardPayload } from '../types';
 import { SavedDashboardsManager } from './SavedDashboardsManager';
+import { SuggestionChips } from './SuggestionChips';
 
 interface ConversationalPanelProps {
   onRefine: (prompt: string, mode: 'edit' | 'new') => void;
@@ -33,8 +38,42 @@ export const ConversationalPanel: React.FC<ConversationalPanelProps> = ({
     isStreaming,
     streamProgressText,
     saveDashboard,
+    setChats,
+    setCurrentPayload
   } = useAppStore();
 
+  const [isCollapsed, setIsCollapsed] = useState(() => {
+    try {
+      const stored = localStorage.getItem('luminate_panel_collapsed');
+      return stored ? JSON.parse(stored) : false;
+    } catch {
+      return false;
+    }
+  });
+
+  useEffect(() => {
+    localStorage.setItem('luminate_panel_collapsed', JSON.stringify(isCollapsed));
+  }, [isCollapsed]);
+
+  useEffect(() => {
+    try {
+      const sessionChats = localStorage.getItem('luminate_session_chats');
+      if (sessionChats && chats.length === 0) {
+        setChats(JSON.parse(sessionChats));
+      }
+    } catch(e) {
+      console.warn("Failed retrieving persisted chats");
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (chats.length > 0) {
+      localStorage.setItem('luminate_session_chats', JSON.stringify(chats));
+    } else {
+      localStorage.removeItem('luminate_session_chats');
+    }
+  }, [chats]);
   const [input, setInput] = useState('');
   const [mode, setMode] = useState<'edit' | 'new'>('edit');
   const [copied, setCopied] = useState(false);
@@ -65,7 +104,7 @@ export const ConversationalPanel: React.FC<ConversationalPanelProps> = ({
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // Quick helper to see progress stages based on token buffers
+  // Modern compilation steps
   const renderStreamingStages = () => {
     if (!isStreaming) return null;
     
@@ -79,37 +118,37 @@ export const ConversationalPanel: React.FC<ConversationalPanelProps> = ({
     const hasCharts = currentPayload?.components?.some(c => c.type !== 'kpi_card') || false;
 
     return (
-      <div className="p-4 rounded-2xl bg-indigo-50/40 border border-indigo-100/50 dark:bg-indigo-950/10 dark:border-indigo-900/40 space-y-3 font-mono text-[11px]">
-        <div className="flex items-center gap-2 mb-1.5 text-indigo-600 dark:text-indigo-400 font-bold uppercase tracking-wider text-[10px]">
-          <Activity className="h-3.5 w-3.5 animate-spin" />
+      <div className="p-4 rounded-xl bg-indigo-50/50 dark:bg-zinc-900 border border-indigo-100/60 dark:border-zinc-800 space-y-3 font-mono text-[11px] animate-pulse">
+        <div className="flex items-center gap-2 mb-1 text-indigo-600 dark:text-indigo-400 font-bold uppercase tracking-wider text-[10px]">
+          <Activity className="h-4.5 w-4.5 animate-spin" />
           <span>Generative Compilation Stages</span>
         </div>
 
-        <div className="space-y-2 text-zinc-600 dark:text-zinc-400">
+        <div className="space-y-2 text-zinc-650 dark:text-zinc-400">
           <div className="flex items-center gap-2">
-            <span className={`h-2 w-2 rounded-full ${hasTitle ? 'bg-emerald-500 animate-pulse' : 'bg-indigo-400 animate-bounce'}`} />
-            <span className={hasTitle ? 'text-emerald-600 font-bold dark:text-emerald-400' : 'text-zinc-500'}>
+            <span className={`h-2.5 w-2.5 rounded-full ${hasTitle ? 'bg-emerald-500' : 'bg-indigo-500 animate-ping'}`} />
+            <span className={hasTitle ? 'text-emerald-600 dark:text-emerald-450 font-semibold' : 'text-zinc-500'}>
               Phase 1: Metadata Framework {hasTitle ? '✓' : '...'}
             </span>
           </div>
 
           <div className="flex items-center gap-2">
-            <span className={`h-2 w-2 rounded-full ${hasKPIs ? 'bg-emerald-500 animate-pulse' : hasTitle ? 'bg-indigo-400 animate-bounce' : 'bg-zinc-200 dark:bg-zinc-800'}`} />
-            <span className={hasKPIs ? 'text-emerald-600 font-bold dark:text-emerald-400' : hasTitle ? 'text-zinc-500 animate-pulse' : 'text-zinc-400'}>
+            <span className={`h-2.5 w-2.5 rounded-full ${hasKPIs ? 'bg-emerald-500' : hasTitle ? 'bg-indigo-500 animate-ping' : 'bg-zinc-200 dark:bg-zinc-800'}`} />
+            <span className={hasKPIs ? 'text-emerald-600 dark:text-emerald-450 font-semibold' : hasTitle ? 'text-zinc-500' : 'text-zinc-400'}>
               Phase 2: High Aggregate KPIs {hasKPIs ? '✓' : '...'}
             </span>
           </div>
 
           <div className="flex items-center gap-2">
-            <span className={`h-2 w-2 rounded-full ${hasCharts ? 'bg-emerald-500 animate-pulse' : hasKPIs ? 'bg-indigo-400 animate-bounce' : 'bg-zinc-200 dark:bg-zinc-800'}`} />
-            <span className={hasCharts ? 'text-emerald-600 font-bold dark:text-emerald-400' : hasKPIs ? 'text-zinc-500 animate-pulse' : 'text-zinc-400'}>
+            <span className={`h-2.5 w-2.5 rounded-full ${hasCharts ? 'bg-emerald-500' : hasKPIs ? 'bg-indigo-500 animate-ping' : 'bg-zinc-200 dark:bg-zinc-800'}`} />
+            <span className={hasCharts ? 'text-emerald-600 dark:text-emerald-450 font-semibold' : hasKPIs ? 'text-zinc-500' : 'text-zinc-400'}>
               Phase 3: High-Res Analytics Charts {hasCharts ? '✓' : '...'}
             </span>
           </div>
         </div>
         
         {streamProgressText && (
-          <div className="border-t border-indigo-100 dark:border-indigo-950/60 pt-2 text-[10px] text-zinc-400 dark:text-zinc-500 italic truncate">
+          <div className="border-t border-indigo-100 dark:border-zinc-800 pt-2 text-[10px] text-zinc-400 dark:text-zinc-500 italic truncate">
             {streamProgressText}
           </div>
         )}
@@ -118,69 +157,113 @@ export const ConversationalPanel: React.FC<ConversationalPanelProps> = ({
   };
 
   return (
-    <div className="flex flex-col h-full bg-white border-r border-slate-200 dark:bg-zinc-950/60 dark:border-zinc-950/80">
-      
-      {/* Title / Gallery bar */}
-      <div className="p-4 border-b border-slate-200 dark:border-zinc-90 w-full flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Bot className="h-4 sm:h-5 w-4 sm:w-5 text-indigo-600 dark:text-indigo-400" />
-          <span className="text-xs sm:text-sm font-bold tracking-tight text-slate-800 dark:text-zinc-200 uppercase tracking-wider">
-            Dash-Dost AI Assistant
+    <>
+      {/* Interactive Chip State */}
+      <div 
+        className={`fixed z-[60] transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] will-change-[transform,opacity] flex flex-col items-end gap-3
+          ${isCollapsed 
+            ? 'bottom-[80px] sm:bottom-6 right-4 sm:right-6 opacity-100 translate-y-0 scale-100' 
+            : 'bottom-[80px] sm:bottom-6 right-4 sm:right-6 opacity-0 translate-y-8 scale-90 pointer-events-none'
+          }`}
+      >
+        <div 
+          onClick={() => setIsCollapsed(false)}
+          className="w-14 h-14 rounded-full bg-white dark:bg-zinc-900 flex items-center justify-center border border-slate-200/60 dark:border-zinc-800 shadow-xl cursor-pointer hover:border-indigo-500 hover:shadow-2xl transition-all duration-300 group"
+          title="Open Conversation Panel"
+        >
+          <Bot className="h-6 w-6 text-indigo-500 group-hover:scale-110 transition-transform" />
+        </div>
+      </div>
+
+      {/* Expanded Panel State */}
+      <div 
+        className={`fixed bottom-0 left-0 right-0 sm:left-auto sm:right-6 z-[60] flex flex-col bg-white dark:bg-zinc-950/98 sm:border sm:border-b-0 border-slate-200 dark:border-zinc-800/80 rounded-t-2xl shadow-[0_-10px_40px_rgba(0,0,0,0.1)] overflow-hidden backdrop-blur-2xl transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] will-change-[transform,opacity] origin-bottom
+          ${isCollapsed 
+            ? 'h-[85dvh] sm:h-[85vh] w-full sm:w-[440px] opacity-0 translate-y-[20%] scale-95 pointer-events-none'
+            : 'h-[85dvh] sm:h-[85vh] w-full sm:w-[440px] opacity-100 translate-y-0 scale-100'
+          }`}
+      >
+        
+        {/* Title / Gallery bar */}
+      <div className="p-4 border-b border-slate-100 dark:border-zinc-900/80 w-full flex items-center justify-between bg-slate-50/50 dark:bg-zinc-950/40 shrink-0">
+        <div className="flex items-center gap-2 min-w-0 pr-1">
+          <Bot className="h-5 w-5 text-indigo-500 shrink-0" />
+          <span className="text-xs font-bold tracking-wider text-slate-800 dark:text-zinc-100 uppercase truncate">
+            Dash-Dost Engine
           </span>
         </div>
         
-        <div className="flex items-center gap-1.5 pointer-events-auto relative z-20">
-          <div className="flex bg-slate-50 dark:bg-zinc-900 rounded-lg p-0.5 border border-slate-200 dark:border-zinc-800">
+        <div className="flex items-center gap-1.5 shrink-0">
+          <div className="flex bg-slate-100 dark:bg-zinc-900 rounded-lg p-0.5 border border-slate-200/60 dark:border-zinc-800 shadow-inner">
             <button
+               type="button"
                onClick={() => setMode('edit')}
-               className={`px-2 py-1 text-[9px] font-bold rounded transition-all ${mode === 'edit' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-500'}`}
+               className={`px-2.5 py-1 text-[9px] font-bold tracking-wider rounded-md transition-all cursor-pointer ${
+                 mode === 'edit' 
+                   ? 'bg-white dark:bg-zinc-800 text-indigo-600 dark:text-indigo-400 shadow-sm border border-slate-250/20' 
+                   : 'text-slate-400 hover:text-slate-600 dark:hover:text-zinc-300'
+               }`}
+               title="Apply changes to the current active dashboard state"
             >
-              EDIT
+              EDIT MODE
             </button>
             <button
+               type="button"
                onClick={() => setMode('new')}
-               className={`px-2 py-1 text-[9px] font-bold rounded transition-all ${mode === 'new' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-500'}`}
+               className={`px-2.5 py-1 text-[9px] font-bold tracking-wider rounded-md transition-all cursor-pointer ${
+                 mode === 'new' 
+                   ? 'bg-white dark:bg-zinc-800 text-indigo-600 dark:text-indigo-400 shadow-sm border border-slate-250/20' 
+                   : 'text-slate-400 hover:text-slate-600 dark:hover:text-zinc-300'
+               }`}
+               title="Compile a fresh new dashboard layout"
             >
-              NEW
+              NEW CANVAS
             </button>
           </div>
+          
           <button
+            type="button"
             onClick={() => {
               useAppStore.getState().loadSavedDashboardsList();
               setShowHistoryModal(!showHistoryModal);
             }}
-            className="p-1.5 px-2.5 rounded-lg text-xs font-semibold hover:bg-slate-50 hover:text-indigo-600 dark:hover:bg-zinc-900 dark:hover:text-indigo-400 inline-flex items-center gap-1 font-mono transition-all border border-transparent hover:border-slate-200 dark:hover:border-zinc-800 shadow-sm"
+            className="p-1.5 px-2 rounded-lg text-xs font-semibold hover:bg-slate-100 hover:text-indigo-600 dark:hover:bg-zinc-900 dark:hover:text-indigo-400 inline-flex items-center gap-1 font-mono transition-all border border-slate-200 dark:border-zinc-800 shadow-sm cursor-pointer"
             title="Browse generated boards library"
           >
-            <History className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Gallery</span>
+            <History className="h-4 w-4 shrink-0 text-slate-400 hover:text-indigo-500" />
+            <span className="hidden sm:inline text-[11px]">Gallery</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setIsCollapsed(true)}
+            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-slate-100 dark:hover:bg-zinc-900/60 transition-all border border-slate-200 dark:border-zinc-800 shadow-sm cursor-pointer ml-0.5"
+            title="Minimize Chat Workspace"
+          >
+            <Minimize2 className="h-4 w-4" />
           </button>
         </div>
       </div>
 
-      {/* History view overlay inside the panel itself or on hover */}
+      {/* History view overlay inside the panel */}
       {showHistoryModal && (
-        <div className="p-4 bg-zinc-100/60 dark:bg-zinc-950/40 border-b border-zinc-200/50 dark:border-zinc-900/60">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[10px] font-bold text-zinc-400 uppercase font-mono tracking-wider">Historical Boards Library</span>
+        <div className="p-4 bg-slate-50 dark:bg-zinc-900/60 border-b border-slate-100 dark:border-zinc-900 shrink-0">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-[10px] font-bold text-slate-400 uppercase font-mono tracking-wider">Historical Boards Library</span>
             <button 
+              type="button"
               onClick={() => setShowHistoryModal(false)}
-              className="text-[10px] font-mono text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 underline"
+              className="text-[10px] font-mono text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300 underline"
             >
               Close
             </button>
           </div>
           <SavedDashboardsManager 
             onLoadDashboard={async (meta) => {
-              const fullPayload = await useAppStore.getState().saveDashboard; // load from idb helper
-              const fetched = await (async () => {
-                const { get } = await import('idb-keyval');
-                return await get(`dash_${meta.dashboardId}`) as MasterDashboardPayload;
-              })();
+              const fetched = await loadDashboardFromIDB(meta.dashboardId);
               if (fetched) {
-                useAppStore.getState().setCurrentPayload(fetched);
-                // set associated conversation logs
-                useAppStore.getState().setChats([
+                setCurrentPayload(fetched);
+                setChats([
                   {
                     id: Math.random().toString(),
                     role: 'user',
@@ -190,7 +273,7 @@ export const ConversationalPanel: React.FC<ConversationalPanelProps> = ({
                   {
                     id: Math.random().toString(),
                     role: 'assistant',
-                    content: `Loaded saved dashboard **${fetched.title}** from your local-first library storage successfully.`,
+                    content: `Successfully restored board **${fetched.title}** from local IndexedDB storage.`,
                     timestamp: new Date().toISOString(),
                     associatedPayload: fetched
                   }
@@ -202,28 +285,32 @@ export const ConversationalPanel: React.FC<ConversationalPanelProps> = ({
         </div>
       )}
 
-      {/* Conversational Prompt Log area */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar bg-slate-50/40">
+      {/* Message List Area */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar bg-slate-50/20 dark:bg-zinc-950/10 min-h-0">
         {chats.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center text-center text-slate-400 p-4 space-y-2">
-            <Sparkles className="h-8 w-8 text-slate-350 dark:text-zinc-750 animate-pulse" />
-            <span className="text-xs font-semibold font-mono text-slate-500">Awaiting your design instructions</span>
-            <p className="text-[11px] text-slate-400 max-w-[210px] leading-relaxed">
-              Create a custom dashboard or click a suggestion below to begin.
-            </p>
+          <div className="h-full flex flex-col items-center justify-center text-center text-slate-400 p-6 space-y-3">
+            <div className="w-12 h-12 rounded-full bg-slate-50 dark:bg-zinc-900 flex items-center justify-center border border-slate-200/50 dark:border-zinc-800">
+              <Sparkles className="h-5 w-5 text-indigo-500" />
+            </div>
+            <div className="space-y-1">
+              <span className="text-xs font-bold text-slate-700 dark:text-zinc-350 font-sans">Awaiting visual directives</span>
+              <p className="text-[11px] text-slate-400 max-w-[240px] leading-relaxed mx-auto font-sans">
+                State your analytical requirements or load templates below to generate a tailored specification.
+              </p>
+            </div>
           </div>
         ) : (
           chats.map((chat) => (
             <div
               key={chat.id}
-              className={`flex gap-3 max-w-[85%] ${
+              className={`flex gap-3 max-w-[88%] ${
                 chat.role === 'user' ? 'ml-auto flex-row-reverse' : 'mr-auto'
               }`}
             >
-              <div className={`p-2.5 rounded-lg text-xs leading-relaxed border ${
+              <div className={`p-3 rounded-2xl text-[11px] sm:text-xs leading-relaxed shadow-sm transition-all ${
                 chat.role === 'user'
-                  ? 'bg-indigo-600 border-indigo-600 text-white rounded-tr-none shadow-sm'
-                  : 'bg-white border-slate-200 text-slate-800 dark:bg-zinc-900 dark:border-zinc-800/80 dark:text-zinc-100 rounded-tl-none shadow-sm'
+                  ? 'bg-indigo-600 text-white rounded-tr-none border border-indigo-700 font-sans'
+                  : 'bg-white border border-slate-200/70 text-slate-700 dark:bg-zinc-900 dark:border-zinc-800/80 dark:text-zinc-200 rounded-tl-none font-medium font-sans'
               }`}>
                 {chat.content}
               </div>
@@ -231,82 +318,104 @@ export const ConversationalPanel: React.FC<ConversationalPanelProps> = ({
           ))
         )}
 
-        {/* Streaming Animation Phases overlay */}
+        {/* Streaming Progression Animation */}
         {renderStreamingStages()}
       </div>
 
-      {/* Persistent Quick Action Panel */}
+      {/* Floating Toolbar Quick Actions */}
       {currentPayload && (
-        <div className="px-4 py-2 border-t border-slate-200 bg-white dark:bg-zinc-950 dark:border-zinc-900/65 grid grid-cols-2 gap-2 text-[10px]">
+        <div className="px-4 py-2 border-t border-slate-100 dark:border-zinc-900 bg-white dark:bg-zinc-950 grid grid-cols-2 gap-2 text-[10px] shrink-0">
           <button
+            type="button"
             onClick={handleCopyJSON}
-            className="flex items-center justify-center gap-1 py-1.5 rounded-lg border border-slate-200 hover:border-indigo-400 hover:bg-slate-50/20 text-slate-600 hover:text-indigo-600 dark:border-zinc-800 dark:text-zinc-404 dark:hover:border-indigo-900/40 dark:hover:text-indigo-400 transition-all font-mono shadow-sm"
+            className="flex items-center justify-center gap-1.5 py-1.5 rounded-lg border border-slate-200 hover:border-indigo-400 hover:bg-slate-50/20 text-slate-600 dark:border-zinc-800 dark:text-zinc-400 dark:hover:border-indigo-800 dark:hover:text-indigo-400 transition-all font-mono shadow-xs cursor-pointer"
             title="Copy compiled JSON config"
           >
-            {copied ? <Check className="h-3 w-3 text-emerald-500" /> : <FileJson className="h-3 w-3" />}
-            <span>{copied ? 'Copied' : 'Copy JSON'}</span>
+            {copied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <FileJson className="h-3.5 w-3.5" />}
+            <span>{copied ? 'Copied Config' : 'Copy Spec'}</span>
           </button>
           
           <button
+            type="button"
             onClick={onClearWorkspace}
-            className="flex items-center justify-center gap-1 py-1.5 rounded-lg border border-slate-200 hover:border-rose-400 hover:bg-rose-50/20 text-slate-600 hover:text-rose-500 dark:border-zinc-800 dark:text-zinc-404 dark:hover:border-rose-950/20 dark:hover:text-rose-400 transition-all font-mono shadow-sm"
-            title="Clean workspace and start fresh"
+            className="flex items-center justify-center gap-1.5 py-1.5 rounded-lg border border-slate-200 hover:border-rose-400 hover:bg-rose-50/10 text-slate-600 dark:border-zinc-800 dark:text-zinc-400 dark:hover:border-rose-950 dark:hover:text-rose-400 transition-all font-mono shadow-xs cursor-pointer"
+            title="Wipe canvas and start fresh"
           >
-            <Trash2 className="h-3 w-3" />
+            <Trash2 className="h-3.5 w-3.5" />
             <span>Clear Canvas</span>
           </button>
         </div>
       )}
 
-      {/* Prompt Enter Box */}
-      <div className="p-4 border-t border-slate-200 bg-white dark:bg-zinc-950 dark:border-zinc-900/60 relative z-10">
+      {/* Bottom TextBox Input Box at the absolute non-scrolling footer */}
+      <div className="p-4 sm:p-5 border-t border-slate-100 dark:border-zinc-900/80 bg-white/80 dark:bg-zinc-950/80 relative shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))]">
+        <div className="mb-3">
+          <div className="flex items-center gap-1.5 mb-2">
+            <Sparkles className="h-3 w-3 text-violet-500 animate-pulse" />
+            <span className="text-[9px] font-mono font-bold text-slate-450 dark:text-zinc-500 uppercase tracking-widest block">Insert Idea Template:</span>
+          </div>
+          <SuggestionChips onSelected={(promptText) => {
+            setInput(promptText);
+            if (textAreaRef.current) {
+              setTimeout(() => {
+                textAreaRef.current?.focus();
+              }, 50);
+            }
+          }} />
+        </div>
+
         {useAppStore.getState().attachedData && (
-          <div className="flex items-center gap-2 mb-2 px-2 py-1 bg-indigo-50 dark:bg-indigo-950/30 rounded-lg w-max border border-indigo-100 dark:border-indigo-900/40 animate-fade-in relative -top-1">
-            <Database className="h-3 w-3 text-indigo-500" />
-            <span className="text-[10px] text-indigo-700 dark:text-indigo-400 font-mono">
-              Data: {useAppStore.getState().attachedData?.fileName}
+          <div className="flex items-center gap-2 mb-2.5 px-2 py-1.5 bg-indigo-50/80 dark:bg-zinc-900 rounded-lg w-max border border-indigo-100 dark:border-zinc-800 animate-in fade-in slide-in-from-bottom-2 duration-200">
+            <Database className="h-3.5 w-3.5 text-indigo-500" />
+            <span className="text-[10px] text-slate-700 dark:text-zinc-300 font-mono">
+              CSV: {useAppStore.getState().attachedData?.fileName}
             </span>
             <button 
               type="button"
               onClick={() => useAppStore.getState().setAttachedData(null)}
-              className="text-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-300 ml-1"
+              className="text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200 p-0.5 ml-1 rounded-full"
             >
               <X className="h-3 w-3" />
             </button>
           </div>
         )}
+
         <form onSubmit={handleSubmit} className="relative">
           <textarea
             ref={textAreaRef}
-            rows={2}
+            rows={Math.min(4, Math.max(2, input.split('\n').length || 1))}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             disabled={isStreaming}
             placeholder={
               isStreaming
-                ? "Compiling layout..."
-                : "Ask for refinements (e.g. 'Add a region filter and change chart colors to emerald')..."
+                ? "Assembling dashboard specifications..."
+                : mode === 'edit'
+                ? "Refine: 'Make KPI layout to col-3, convert bar chart to line'..."
+                : "Type instructions for a fresh layout from scratch..."
             }
-            className="w-full pl-3 pr-10 py-2.5 text-xs rounded-lg border border-slate-200 text-slate-700 bg-slate-50 focus:border-indigo-500 focus:bg-white dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-200 dark:focus:border-indigo-450 focus:outline-none transition-all resize-none shadow-inner"
+            className="w-full pl-3 pr-11 py-2.5 text-xs rounded-xl border border-slate-200 text-slate-800 bg-white dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100 focus:ring-1 focus:ring-indigo-550 focus:border-indigo-550 focus:outline-none transition-all resize-none shadow-xs custom-scrollbar leading-relaxed scroll-smooth"
           />
           <button
             type="submit"
             disabled={!input.trim() || isStreaming}
-            className={`absolute right-2 bottom-3 p-1.5 rounded-lg text-white transition-all ${
+            className={`absolute right-1 text-white p-2 rounded-lg transition-all cursor-pointer ${
               input.trim() && !isStreaming
-                ? 'bg-indigo-600 hover:bg-indigo-700 shadow-md shadow-indigo-500/10 dark:bg-indigo-500 dark:hover:bg-indigo-600'
-                : 'bg-slate-200 dark:bg-zinc-800 text-slate-400'
+                ? 'bg-indigo-600 hover:bg-indigo-700 shadow-md transform active:scale-95'
+                : 'bg-slate-100 dark:bg-zinc-800 text-slate-400 dark:text-zinc-650'
             }`}
+            style={{ bottom: "11px" }}
           >
-            <CornerDownLeft className="h-3.5 w-3.5" />
+            <CornerDownLeft className="h-4 w-4" />
           </button>
         </form>
-        <p className="text-[10px] text-slate-400 dark:text-zinc-500 mt-1.5 text-center font-mono select-none">
-          Use Shift+Enter for new line
-        </p>
+        <div className="flex items-center justify-between text-[10px] text-slate-400 dark:text-zinc-500 mt-2 font-mono">
+          <span>Active Mode: <strong className="text-indigo-600 dark:text-indigo-400 uppercase">{mode}</strong></span>
+          <span>Shift+Enter to add lines</span>
+        </div>
       </div>
-
     </div>
+    </>
   );
 };

@@ -41,18 +41,18 @@ export function getDashboardCategoryOptions(
   payload: MasterDashboardPayload,
   filter: DashboardFilter
 ): string[] {
-  // If options are already loaded in the schema, return them
-  if (filter.options && filter.options.length > 0) {
-    return filter.options;
+  const optionsSet = new Set<string>();
+
+  // If options are already loaded in the schema, add them first
+  if (filter.options && Array.isArray(filter.options)) {
+    filter.options.forEach(opt => optionsSet.add(opt));
   }
 
-  // Otherwise, extract unique values dynamically from targets
-  const optionsSet = new Set<string>();
-  
+  // Then, extract unique values dynamically from targets
   for (const component of payload.components) {
-    for (const row of component.seriesData) {
+    for (const row of component.seriesData || []) {
       for (const key of filter.targetKeys) {
-        if (row[key] !== undefined && row[key] !== null) {
+        if (row[key] !== undefined && row[key] !== null && String(row[key]).trim() !== "") {
           optionsSet.add(String(row[key]));
         }
       }
@@ -82,7 +82,7 @@ export function isRowPassingFilters(
       let passesDate = false;
 
       for (const key of filter.targetKeys) {
-        if (row[key] !== undefined) {
+        if (row[key] !== undefined && row[key] !== null && String(row[key]).trim() !== "") {
           rowHasTarget = true;
           const rowVal = String(row[key]);
           if (rowVal >= start && rowVal <= end) {
@@ -107,7 +107,7 @@ export function isRowPassingFilters(
         let passesCategory = false;
 
         for (const key of filter.targetKeys) {
-          if (row[key] !== undefined) {
+          if (row[key] !== undefined && row[key] !== null && String(row[key]).trim() !== "") {
             rowHasTarget = true;
             const rowVal = String(row[key]);
             if (selectedOpts.includes(rowVal)) {
