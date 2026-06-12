@@ -1,0 +1,6 @@
+{
+  "name": "Dash-Dost",
+  "description": "An interactive local-first generative dashboard builder powered by Gemini",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
